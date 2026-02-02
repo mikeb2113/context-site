@@ -1,6 +1,8 @@
 "use client";
+
 import Link from "next/link";
 import { useRef, useState } from "react";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function ExamplePage() {
   const [output, setOutput] = useState("Output will appear here…");
@@ -8,48 +10,53 @@ export default function ExamplePage() {
   const [fileName, setFileName] = useState("");
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-
+  const [captchaToken, setCaptchaToken] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-async function onRun() {
-  if (!prompt.trim()) {
-    setOutput("Please enter a prompt.");
-    return;
+  async function onRun() {
+    if (!prompt.trim()) {
+      setOutput("Please enter a prompt.");
+      return;
+    }
+    if (!pdfFile) {
+      setOutput("Please choose a PDF.");
+      return;
+    }
+    if (!captchaToken) {
+      setOutput("Please complete the human check (captcha).");
+      return;
+    }
+
+    setLoading(true);
+    setOutput("Running…");
+
+    try {
+      const form = new FormData();
+      form.append("prompt", prompt);
+      form.append("pdf", pdfFile);
+      form.append("captcha_token", captchaToken); // ✅ send token to /api/analyze
+
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Request failed");
+
+      const out =
+        typeof data.output === "string"
+          ? data.output
+          : JSON.stringify(data.output, null, 2);
+
+      setOutput(out ?? "(no output returned)");
+    } catch (err: any) {
+      setOutput(`Error: ${err.message ?? String(err)}`);
+    } finally {
+      setLoading(false);
+    }
   }
-  if (!pdfFile) {
-    setOutput("Please choose a PDF.");
-    return;
-  }
-
-  setLoading(true);
-  setOutput("Running…");
-
-  try {
-    const form = new FormData();
-    form.append("prompt", prompt);
-    form.append("pdf", pdfFile);
-
-    const res = await fetch("/api/analyze", {
-      method: "POST",
-      body: form,
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data?.error || "Request failed");
-
-    const out =
-      typeof data.output === "string"
-        ? data.output
-        : JSON.stringify(data.output, null, 2);
-
-    setOutput(out ?? "(no output returned)");
-  } catch (err: any) {
-    setOutput(`Error: ${err.message ?? String(err)}`);
-  } finally {
-    setLoading(false);
-  }
-}
 
   return (
     <div className="space-y-12 max-w-3xl">
@@ -99,6 +106,18 @@ async function onRun() {
               setPdfFile(file);
               setFileName(file ? file.name : "");
             }}
+          />
+        </section>
+
+        {/* ✅ Turnstile widget MUST be inside the rendered JSX */}
+        <section className="space-y-2">
+          <label className="text-sm text-neutral-700">Human check:</label>
+
+          <Turnstile
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+            onSuccess={(token) => setCaptchaToken(token)}
+            onExpire={() => setCaptchaToken("")}
+            onError={() => setCaptchaToken("")}
           />
         </section>
 
