@@ -15,7 +15,10 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # add your deployed domain later
+    allow_origins=[
+    "http://localhost:3000",
+    "https://YOUR-PROJECT.vercel.app",
+]  # add your deployed domain later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
