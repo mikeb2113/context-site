@@ -14,49 +14,55 @@ export default function ExamplePage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  async function onRun() {
-    if (!prompt.trim()) {
-      setOutput("Please enter a prompt.");
-      return;
-    }
-    if (!pdfFile) {
-      setOutput("Please choose a PDF.");
-      return;
-    }
-    if (!captchaToken) {
-      setOutput("Please complete the human check (captcha).");
-      return;
-    }
-
-    setLoading(true);
-    setOutput("Running…");
-
-    try {
-      const form = new FormData();
-      form.append("prompt", prompt);
-      form.append("pdf", pdfFile);
-      form.append("captcha_token", captchaToken); // ✅ send token to /api/analyze
-
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        body: form,
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Request failed");
-
-      const out =
-        typeof data.output === "string"
-          ? data.output
-          : JSON.stringify(data.output, null, 2);
-
-      setOutput(out ?? "(no output returned)");
-    } catch (err: any) {
-      setOutput(`Error: ${err.message ?? String(err)}`);
-    } finally {
-      setLoading(false);
-    }
+async function onRun() {
+  if (!prompt.trim()) {
+    setOutput("Please enter a prompt.");
+    return;
   }
+  if (!pdfFile) {
+    setOutput("Please choose a PDF.");
+    return;
+  }
+  if (!captchaToken) {
+    setOutput("Please complete the human check (captcha).");
+    return;
+  }
+
+  setLoading(true);
+  setOutput("Running…");
+
+  try {
+    const form = new FormData();
+    form.append("prompt", prompt);
+    form.append("pdf", pdfFile);
+    form.append("captcha_token", captchaToken);
+
+    // ✅ DEBUG: proves you’re running the new build + token is attached
+    form.append("debug_marker", "hello-from-new-build");
+    console.log("captchaToken state:", captchaToken);
+    console.log("form captcha_token:", form.get("captcha_token"));
+    console.log("form debug_marker:", form.get("debug_marker"));
+
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      body: form,
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || "Request failed");
+
+    const out =
+      typeof data.output === "string"
+        ? data.output
+        : JSON.stringify(data.output, null, 2);
+
+    setOutput(out ?? "(no output returned)");
+  } catch (err: any) {
+    setOutput(`Error: ${err.message ?? String(err)}`);
+  } finally {
+    setLoading(false);
+  }
+}
 
   return (
     <div className="space-y-12 max-w-3xl">
