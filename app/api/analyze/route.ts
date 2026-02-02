@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   forward.append("prompt", prompt);
   forward.append("pdf", pdf, pdf.name);
 
-  const pyRes = await fetch("http://127.0.0.1:8000/analyze", {
+  const pyRes = await fetch("https://context-site.onrender.com/analyze", {
     method: "POST",
     body: forward,
   });
